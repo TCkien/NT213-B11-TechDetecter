@@ -1,40 +1,47 @@
-from flask import Flask, jsonify
-from flask_cors import CORS  # Thêm dòng này
-import scenario1
-import scenario2
-import scenario3
-import scenario4
-import scenario5
-import scenario6
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import cms_detection
+import backend_framework_detection
+import javascript_library_detection
+import web_server_detection
+import ssl_fingerprint_analysis
+import api_path_analysis
 
 app = Flask(__name__)
-CORS(app)  # Thêm dòng này
+CORS(app)
 
-@app.route('/run/<scenario>', methods=['GET'])
-def run_scenario(scenario):
-    if scenario == "scenario1":
-        result = scenario1.run()
-    elif scenario == "scenario2":
-        result = scenario2.run()
-    elif scenario == "scenario3":
-        result = scenario3.run()
-    elif scenario == "scenario4":
-        result = scenario4.run()
-    elif scenario == "scenario5":
-        result = scenario5.run()
-    elif scenario == "scenario6":
-        result = scenario6.run()
-    elif scenario == "all":
+@app.route('/run', methods=['POST'])
+def run_function():
+    data = request.json
+    url = data.get('url', '')
+    function = data.get('function', '')
+
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+
+    if function == "detect_cms":
+        result = cms_detection.run(url)
+    elif function == "detect_backend_framework":
+        result = backend_framework_detection.run(url)
+    elif function == "detect_js_libraries":
+        result = javascript_library_detection.run(url)
+    elif function == "detect_web_server":
+        result = web_server_detection.run(url)
+    elif function == "analyze_ssl_fingerprint":
+        result = ssl_fingerprint_analysis.run(url)
+    elif function == "analyze_api_paths":
+        result = api_path_analysis.run(url)
+    elif function == "all":
         result = "\n".join([
-            scenario1.run(),
-            scenario2.run(),
-            scenario3.run(),
-            scenario4.run(),
-            scenario5.run(),
-            scenario6.run()
+            cms_detection.run(url),
+            backend_framework_detection.run(url),
+            javascript_library_detection.run(url),
+            web_server_detection.run(url),
+            ssl_fingerprint_analysis.run(url),
+            api_path_analysis.run(url)
         ])
     else:
-        result = "Unknown scenario"
+        result = "Unknown function"
 
     return jsonify({"result": result})
 
