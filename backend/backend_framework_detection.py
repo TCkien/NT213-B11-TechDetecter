@@ -5,35 +5,58 @@ def run(url):
         # Ensure the URL has the correct scheme
         if not url.startswith("http://") and not url.startswith("https://"):
             url = "http://" + url
-        
+
         # Fetch the website content and headers
         response = requests.get(url, timeout=10, allow_redirects=True)
         html = response.text.lower()
         headers = response.headers
+        cookies = response.cookies.get_dict()
 
-        # Check for backend framework indicators
-        if "asp.net" in headers.get("X-Powered-By", "").lower() or "asp.net" in html:
+        # Backend framework detection
+        # ASP.NET Core: Check for specific cookies
+        if "arraffinity" in cookies or "arraffinitysamesite" in cookies:
             return f"Detected Backend Framework: ASP.NET Core on {url}"
-        elif "django" in headers.get("X-Powered-By", "").lower() or "django" in html:
-            return f"Detected Backend Framework: Django on {url}"
-        elif "laravel" in headers.get("X-Powered-By", "").lower() or "laravel" in html:
+
+        # Django: Check for /admin path or forms with csrfmiddlewaretoken
+        admin_url = f"{url.rstrip('/')}/admin"
+        try:
+            # Check /admin path
+            admin_response = requests.get(admin_url, timeout=5, allow_redirects=True)
+            if admin_response.status_code == 200:
+                return f"Detected Backend Framework: Django on {url} (via /admin path)"
+        except requests.exceptions.RequestException:
+            pass
+
+        # Check for forms with csrfmiddlewaretoken in HTML
+        if "<form" in html and "csrfmiddlewaretoken" in html:
+            return f"Detected Backend Framework: Django on {url} (via CSRF token)"
+
+        # Laravel: Check for forms with _token in HTML
+        if "<form" in html and "_token" in html:
             return f"Detected Backend Framework: Laravel on {url}"
-        elif "rails" in headers.get("X-Powered-By", "").lower() or "ruby on rails" in html or "rails" in html:
+
+        # Ruby on Rails: Check for forms with authenticity_token
+        if "<form" in html and "authenticity_token" in html:
             return f"Detected Backend Framework: Ruby on Rails on {url}"
-        elif "express" in headers.get("X-Powered-By", "").lower():
+
+        # Express.js: Check for specific cookies
+        if "connect.sid" in cookies:
             return f"Detected Backend Framework: Express.js on {url}"
-        elif "cakephp" in headers.get("X-Powered-By", "").lower() or "cakephp" in html:
-            return f"Detected Backend Framework: CakePHP on {url}"
-        elif "flask" in headers.get("X-Powered-By", "").lower() or "flask" in html:
+
+        # CakePHP: Check for /app/webroot/ path
+        webroot_url = f"{url.rstrip('/')}/app/webroot/"
+        try:
+            webroot_response = requests.get(webroot_url, timeout=5, allow_redirects=True)
+            if webroot_response.status_code == 200:
+                return f"Detected Backend Framework: CakePHP on {url} (via /app/webroot/ path)"
+        except requests.exceptions.RequestException:
+            pass
+
+        # Flask: Check for Werkzeug header or set-cookie: session
+        if "werkzeug" in headers.get("server", "").lower() or "session" in headers.get("set-cookie", "").lower():
             return f"Detected Backend Framework: Flask on {url}"
-        elif "spring" in headers.get("X-Powered-By", "").lower() or "spring" in html:
-            return f"Detected Backend Framework: Spring Boot on {url}"
-        elif "koa" in headers.get("X-Powered-By", "").lower() or "koa" in html:
-            return f"Detected Backend Framework: Koa on {url}"
-        elif "phoenix" in headers.get("X-Powered-By", "").lower() or "phoenix" in html:
-            return f"Detected Backend Framework: Phoenix on {url}"
-        else:
-            return f"No backend framework detected for {url}."
+
+        return f"No backend framework detected for {url}."
     
     except Exception as e:
         return f"Error detecting backend framework for {url}: {e}"
